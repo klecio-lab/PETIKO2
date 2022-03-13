@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Models\pedido;
 
 class HomeController extends Controller
 {
@@ -16,7 +17,7 @@ class HomeController extends Controller
     {
     	$cep = strval($cep);
 		$CEPinfo = "https://viacep.com.br/ws/" . $cep . "/json/";
-        $getCep = file_get_contents($CEPinfo);
+        @$getCep = file_get_contents($CEPinfo);
         $CepFinal = json_decode($getCep);
         return $CepFinal;
     }
@@ -36,28 +37,104 @@ class HomeController extends Controller
     }
 
     public function SendForm(Request $request){
-        $EnderecoCliente = strtoupper($request->all());
+        $EnderecoCliente = $request->all();
         
         // parte de tratamentos de erro
-        $enderecoViaCep = HomeController::getAddressByCepViaCep($tudo['cep']);
-        if($enderecoViaCep->erro == true){
-            $enderecoPostmam = HomeController::getAddressByCepPostmam($tudo['cep']);
-            if($enderecoPostmam == 404){
+        $enderecoViaCep = HomeController::getAddressByCepViaCep(intval($EnderecoCliente['cep']));
+        if(@$enderecoViaCep->erro == true){
+            $enderecoPostmam = HomeController::getAddressByCepPostmam(intval($EnderecoCliente['cep']));
+            if(@$enderecoPostmam == 404){
                 session()->flash('Erro', 'Seu CEP não Não foi Encontrado!');
                 return redirect('/formulario');
             }else{
-                dd($enderecoPostmam);
-                // if()
+                if($enderecoPostmam->cep == $EnderecoCliente['cep'] && $enderecoPostmam->longradouro == $EnderecoCliente['rua'] && $enderecoPostmam->bairro == $EnderecoCliente['bairro'] && $enderecoPostmam->localidade == $EnderecoCliente['cidade'] && $enderecoPostmam->uf == $EnderecoCliente['uf']){
+                    $passardados = New pedido;
+                    #salvando as variaveis que vão para o bd
+                    $passardados->nomeCliente  = $EnderecoCliente['nome'];
+                    $passardados->cep = $EnderecoCliente['cep'];
+                    $passardados->rua = $EnderecoCliente['rua'];
+                    $passardados->complemento = $EnderecoCliente['complemento'];
+                    $passardados->bairro = $EnderecoCliente['bairro'];
+                    $passardados->cidade = $EnderecoCliente['cidade'];
+                    $passardados->uf = $EnderecoCliente['uf'];
+                    $passardados->IDpedido = 1;
+                    $passardados->save();
+
+                    session()->flash('success', 'Seu pedido foi cadastrado com Sucesso!');
+                    return redirect('/formulario');
+                }else{
+                    session()->flash('perdido', 'Seu endereço não confiz com o CEP!');
+                    return redirect('/formulario');
+                }
             }
         }else{
-            if($enderecoViaCep->cep == $EnderecoCliente['cep'] && $enderecoViaCep->longradouro == $EnderecoCliente['rua'] && $enderecoViaCep->bairro == $EnderecoCliente['bairro'] && $enderecoViaCep->localidade == $EnderecoCliente['cidade'] && $enderecoViaCep->uf == $EnderecoCliente['uf']){
-            dd($enderecoViaCep);
+            if(strtoupper($enderecoViaCep->logradouro) == strtoupper($EnderecoCliente['rua']) && strtoupper($enderecoViaCep->bairro) == strtoupper($EnderecoCliente['bairro']) && strtoupper($enderecoViaCep->localidade) == strtoupper($EnderecoCliente['cidade']) && strtoupper($enderecoViaCep->uf) == strtoupper($EnderecoCliente['uf'])){
+                $passardados = New pedido;
+
+                #salvando as variaveis que vão para o bd
+                $passardados->nomeCliente  = $EnderecoCliente['nome'];
+                $passardados->cep = $EnderecoCliente['cep'];
+                $passardados->rua = $EnderecoCliente['rua'];
+                $passardados->complemento = $EnderecoCliente['complemento'];
+                $passardados->bairro = $EnderecoCliente['bairro'];
+                $passardados->cidade = $EnderecoCliente['cidade'];
+                $passardados->uf = $EnderecoCliente['uf'];
+                $passardados->IDpedido = 1;
+                $passardados->save();
+
+                session()->flash('success', 'Seu pedido foi cadastrado com Sucesso!');
+                return redirect('/formulario');
+
+            }
+            else{
+                $enderecoPostmam = HomeController::getAddressByCepPostmam(intval($EnderecoCliente['cep']));
+                dd($enderecoPostmam);
+                if(@$enderecoPostmam == 404){
+                    session()->flash('Erro', 'Seu CEP não Não foi Encontrado!');
+                    return redirect('/formulario');
+                }else{
+                    if(strtoupper($enderecoPostmam->longradouro) == strtoupper($EnderecoCliente['rua']) && strtoupper($enderecoPostmam->bairro) == strtoupper($EnderecoCliente['bairro']) && strtoupper($enderecoPostmam->cidade) == strtoupper($EnderecoCliente['cidade']) && strtoupper($enderecoPostmam->estado) == strtoupper($EnderecoCliente['uf'])){
+                        $passardados = New pedido;
+
+                        #salvando as variaveis que vão para o bd
+                        $passardados->nomeCliente  = $EnderecoCliente['nome'];
+                        $passardados->cep = $EnderecoCliente['cep'];
+                        $passardados->rua = $EnderecoCliente['rua'];
+                        $passardados->complemento = $EnderecoCliente['complemento'];
+                        $passardados->bairro = $EnderecoCliente['bairro'];
+                        $passardados->cidade = $EnderecoCliente['cidade'];
+                        $passardados->uf = $EnderecoCliente['uf'];
+                        $passardados->IDpedido = 1;
+                        $passardados->save();
+
+                        session()->flash('success', 'Seu pedido foi cadastrado com Sucesso!');
+                        return redirect('/formulario');
+                    }else{
+                        session()->flash('perdido', 'Seu endereço não confiz com o CEP!');
+                        return redirect('/formulario');
+                    }
+                }
             }
         }
     
     }
-    public function formCep($cep){
-        $cep = $cep;
-        dd($cep);
+    public function formCep($cep, Request $request){
+        $cep = strval($cep);
+        
+        // parte de tratamentos de erro
+        $enderecoViaCep = HomeController::getAddressByCepViaCep($cep);
+        if(@$enderecoViaCep->erro == true){
+            $enderecoPostmam = HomeController::getAddressByCepPostmam($cep);
+            if($enderecoPostmam == 404){
+                session()->flash('Erro', 'Seu CEP não Não foi Encontrado!');
+                return redirect('/formulario');
+            }else{
+                $end = $enderecoPostmam;
+                return view('form', compact('end'));
+            }
+        }else{  
+                $end = $enderecoViaCep;
+                return view('form', compact('end'));
+        }
     }
 }
